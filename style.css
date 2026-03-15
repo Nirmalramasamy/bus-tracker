@@ -1,0 +1,151 @@
+var marker1;
+var marker2;
+
+firebase.database().ref("bus_data/bus1").on("value",function(snapshot){
+
+var data = snapshot.val();
+
+marker1.setPosition({
+lat:data.lat,
+lng:data.lng
+});
+
+});
+
+firebase.database().ref("bus_data/bus2").on("value",function(snapshot){
+
+var data = snapshot.val();
+
+marker2.setPosition({
+lat:data.lat,
+lng:data.lng
+});
+
+});
+
+document.getElementById("ticketForm").addEventListener("submit",function(e){
+
+e.preventDefault();
+
+let name=document.getElementById("name").value;
+let from=document.getElementById("from").value;
+let to=document.getElementById("to").value;
+let seats=document.getElementById("seats").value;
+
+let ticketData =
+"Passenger: "+name+
+"\nFrom: "+from+
+"\nTo: "+to+
+"\nSeats: "+seats;
+
+document.getElementById("bookingMessage").innerHTML=
+"Ticket Booked Successfully";
+
+document.getElementById("qrcode").innerHTML="";
+
+QRCode.toCanvas(document.getElementById("qrcode"), ticketData);
+
+});
+
+var routeLine = new google.maps.Polyline({
+path:route,
+geodesic:true,
+strokeColor:"#FF0000",
+strokeOpacity:1.0,
+strokeWeight:4
+});
+
+routeLine.setMap(map);
+
+function calculateDistance(lat1,lng1,lat2,lng2){
+
+var R = 6371;
+
+var dLat = (lat2-lat1) * Math.PI/180;
+var dLng = (lng2-lng1) * Math.PI/180;
+
+var a =
+Math.sin(dLat/2)*Math.sin(dLat/2) +
+Math.cos(lat1*Math.PI/180) *
+Math.cos(lat2*Math.PI/180) *
+Math.sin(dLng/2)*Math.sin(dLng/2);
+
+var c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+
+var distance = R * c;
+
+return distance;
+
+}
+
+body{
+font-family: Arial, sans-serif;
+margin:0;
+background:#f2f2f2;
+}
+
+.header{
+background:#2196F3;
+color:white;
+padding:15px;
+text-align:center;
+font-size:22px;
+}
+
+#map{
+height:500px;
+width:100%;
+}
+
+.card{
+background:white;
+margin:10px;
+padding:15px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+
+input,select{
+width:100%;
+padding:10px;
+margin-top:5px;
+margin-bottom:10px;
+border-radius:5px;
+border:1px solid #ccc;
+}
+
+button{
+width:100%;
+padding:10px;
+background:#2196F3;
+color:white;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+
+button:hover{
+background:#1976D2;
+}
+
+.info{
+font-size:16px;
+margin-top:5px;
+}
+
+span{
+font-weight:bold;
+color:#e91e63;
+}
+
+@media(max-width:768px){
+
+#map{
+height:300px;
+}
+
+.header{
+font-size:18px;
+}
+
+}
