@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Smart Bus Tracking System</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAP_API"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+margin:0;
+background:#f2f2f2;
+}
+
+header{
+background:#1976d2;
+color:white;
+padding:15px;
+text-align:center;
+font-size:22px;
+}
+
+#map{
+width:100%;
+height:450px;
+}
+
+.panel{
+padding:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+margin-bottom:20px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+
+input{
+width:100%;
+padding:10px;
+margin:5px 0;
+}
+
+button{
+background:#1976d2;
+color:white;
+border:none;
+padding:10px;
+width:100%;
+cursor:pointer;
+}
+
+#qr{
+margin-top:15px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>Smart Bus Tracking System 🚍</header>
+
+<div id="map"></div>
+
+<div class="panel">
+
+<div class="card">
+
+<h3>Bus Information</h3>
+
+<p id="location">Waiting for GPS...</p>
+
+<p id="eta">ETA: Calculating...</p>
+
+</div>
+
+<div class="card">
+
+<h3>Book Bus Ticket</h3>
+
+<input id="name" placeholder="Passenger Name">
+
+<input id="from" placeholder="From Stop">
+
+<input id="to" placeholder="To Stop">
+
+<input id="seats" placeholder="Seats">
+
+<button onclick="generateTicket()">Generate Ticket</button>
+
+<div id="qr"></div>
+
+</div>
+
+</div>
+
+<script>
+
+var firebaseConfig = {
+
+apiKey:"YOUR_FIREBASE_API_KEY",
+
+databaseURL:"https://bus-tracking-system-36943-default-rtdb.firebaseio.com/"
+
+};
+
+firebase.initializeApp(firebaseConfig);
+
+var map;
+var marker;
+var lastPosition=null;
+
+function initMap(){
+
+map = new google.maps.Map(document.getElementById("map"),{
+
+zoom:15,
+
+center:{lat:11.0758,lng:76.9883}
+
+});
+
+marker = new google.maps.Marker({
+
+position:{lat:11.0758,lng:76.9883},
+
+map:map,
+
+icon:{
+url:"https://maps.google.com/mapfiles/kml/shapes/bus.png",
+scaledSize:new google.maps.Size(40,40)
+}
+
+});
+
+addBusStops();
+
+listenBus();
+
+}
+
+function listenBus(){
+
+firebase.database().ref("bus_data/bus1").on("value",function(snapshot){
+
+var data=snapshot.val();
+
+var newPos={lat:data.lat,lng:data.lng};
+
+smoothMove(marker,newPos);
+
+map.panTo(newPos);
+
+document.getElementById("location").innerHTML=
+
+"Location: "+data.lat+" , "+data.lng;
+
+calculateETA(data.lat,data.lng);
+
+});
+
+}
+
+function smoothMove(marker,newPos){
+
+if(lastPosition==null){
+
+marker.setPosition(newPos);
+lastPosition=newPos;
+return;
+
+}
+
+var steps=20;
+
+var latStep=(newPos.lat-lastPosition.lat)/steps;
+
+var lngStep=(newPos.lng-lastPosition.lng)/steps;
+
+var i=0;
+
+var interval=setInterval(function(){
+
+i++;
+
+var lat=lastPosition.lat+(latStep*i);
+var lng=lastPosition.lng+(lngStep*i);
+
+marker.setPosition({lat:lat,lng:lng});
+
+if(i>=steps){
+
+clearInterval(interval);
+lastPosition=newPos;
+
+}
+
+},100);
+
+}
+
+function addBusStops(){
+
+var stops=[
+
+{lat:11.0765,lng:76.9875,name:"Stop 1"},
+{lat:11.0780,lng:76.9890,name:"Stop 2"},
+{lat:11.0740,lng:76.9900,name:"Stop 3"}
+
+];
+
+stops.forEach(function(stop){
+
+new google.maps.Marker({
+
+position:stop,
+
+map:map,
+
+title:stop.name,
+
+icon:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+
+});
+
+});
+
+}
+
+function calculateETA(busLat,busLng){
+
+var stopLat=11.0780;
+var stopLng=76.9890;
+
+var R=6371;
+
+var dLat=(stopLat-busLat)*Math.PI/180;
+var dLng=(stopLng-busLng)*Math.PI/180;
+
+var a=
+Math.sin(dLat/2)*Math.sin(dLat/2)+
+Math.cos(busLat*Math.PI/180)*
+Math.cos(stopLat*Math.PI/180)*
+Math.sin(dLng/2)*Math.sin(dLng/2);
+
+var c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+
+var distance=R*c;
+
+var speed=30;
+
+var eta=(distance/speed)*60;
+
+document.getElementById("eta").innerHTML=
+
+"ETA: "+eta.toFixed(1)+" minutes";
+
+}
+
+function generateTicket(){
+
+var name=document.getElementById("name").value;
+var from=document.getElementById("from").value;
+var to=document.getElementById("to").value;
+var seats=document.getElementById("seats").value;
+
+var ticket="Name:"+name+
+" From:"+from+
+" To:"+to+
+" Seats:"+seats;
+
+document.getElementById("qr").innerHTML="";
+
+new QRCode(document.getElementById("qr"),ticket);
+
+}
+
+window.onload=initMap;
+
+</script>
+
+</body>
+
+</html>
